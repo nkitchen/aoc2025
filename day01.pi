@@ -1,0 +1,51 @@
+import aoc.
+
+main([File|T]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_lines(File),
+    Rots = [rotation(Line) : Line in Input],
+    part1(Rots),
+    part2(Rots).
+
+part1(Rots) =>
+    NetRots = net_rotations(50, Rots),
+    %println(NetRots),
+    Zeros = [1 : R in NetRots, R == 0].sum,
+    println("Part 1: " ++ to_string(Zeros)).
+
+rotation(['L'|N]) = -to_number(N).
+rotation(['R'|N]) = to_number(N).
+
+net_rotations(Init, Rots) = NetRots =>
+   L = net_rotations_acc(Init, Rots, []),
+   NetRots = reverse(L).
+
+net_rotations_acc(Init, [], L) = L.
+net_rotations_acc(Init, [R|T], L) = NetRots =>
+    Next = (Init + R) mod 100,
+    NetRots = net_rotations_acc(Next, T, [Next|L]).
+
+part2(Rots) =>
+    [Pos, Clicks] = reduce(zero_clicks, Rots, [50, 0]),
+    println("Part 2: " ++ to_string(Clicks)).
+
+zero_clicks([Pos, Clicks], Rot) = [PosN, ClicksN] =>
+    FullTurns = abs(Rot // 100),
+    Rem = Rot rem 100,
+    PosN = (Pos + Rem) mod 100,
+    ClicksN = Clicks + FullTurns + last_click(Pos, Rot, PosN),
+    dprintln(to_fstring("[%d, %d] =( %d )=> [%d, %d]", Pos, Clicks, Rot, PosN, ClicksN)).
+
+last_click(Pos, Rot, 0) = N, Rot != 0 => N = 1.
+last_click(Pos, Rot, PosN) = N, Pos != 0, Rot > 0, PosN < Pos => N = 1.
+last_click(Pos, Rot, PosN) = N, Pos != 0, Rot < 0, PosN > Pos => N = 1.
+last_click(_, _, _) = 0.
+
+% ===> multitime results
+% 1: picat day01.pi in01.txt
+%             Mean        Std.Dev.    Min         Median      Max
+% real        0.047       0.000       0.047       0.047       0.047
+% user        0.021       0.000       0.021       0.021       0.021
+% sys         0.025       0.000       0.025       0.025       0.025

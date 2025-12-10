@@ -1,0 +1,32 @@
+import aoc.
+import math.
+import util.
+
+main([File|T]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_chars(File),
+    RangeStrs = [strip(S) : S in split(Input, ",")],
+    Ranges = [map(to_number, split(S, "-")) : S in RangeStrs],
+    Invalid = flatten([invalid_ids(R) : R in Ranges]),
+    printf("Part 1: %ld\n", Invalid.sum),
+    true.
+
+num_split(N) = [to_number(D) : D in to_string(N)].
+
+num_join(Ds) = to_number(flatten(map(to_string, Ds))).
+
+invalid_ids([L, U]) = Inv =>
+    Inv = [N : N in L..U, invalid(N)],
+    %dprintf("%s => %s\n", to_string([L, U]), to_string(Inv)),
+    true.
+
+invalid(N) =>
+    num_digits(N) mod 2 == 0,
+    D = num_split(N),
+    K = D.length // 2,
+    D[1..K] = D[(K+1)..(2*K)].
+
+%num_digits(N) = ceiling(log10(N+1)).
+num_digits(N) = to_string(N).length.

@@ -1,0 +1,79 @@
+import aoc.
+import util.
+
+main([File|T]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_chars(File),
+    RangeStrs = [strip(S) : S in split(Input, ",")],
+    Ranges = [map(to_number, split(S, "-")) : S in RangeStrs],
+    part1(Ranges),
+    part2(Ranges),
+    true.
+
+part1(Ranges) =>
+    Invalid = flatten([invalid_ids(R) : R in Ranges]),
+    printf("Part 1: %ld\n", Invalid.sum).
+
+part2(Ranges) =>
+    Invalid = flatten([invalid_ids2(R) : R in Ranges]),
+    printf("Part 2: %ld\n", Invalid.sum).
+    
+num_split(N) = [to_number(D) : D in to_string(N)].
+
+num_join(Ds) = to_number(flatten(map(to_string, Ds))).
+
+invalid_ids([L, U]) = invalid_ids([L, U, num_split(L), num_split(U)]).
+
+invalid_ids([L, U, LDigs, UDigs]) = Inv,
+    LDigs.length == UDigs.length, LDigs.length mod 2 == 1 =>
+    Inv = [].
+
+invalid_ids([L, U, LDigs, UDigs]) = Inv =>
+    HalfMinDigs = min_half(LDigs, UDigs),
+    HalfMaxDigs = max_half(LDigs, UDigs),
+    HalfMin = num_join(HalfMinDigs),
+    HalfMax = num_join(HalfMaxDigs),
+    Inv = [D : H in HalfMin..HalfMax, D = doubled(H), between(L, U, D)],
+    true.
+
+min_half(LDigs, UDigs) = H, LDigs.length mod 2 == 0 =>
+    H = LDigs[1..LDigs.length // 2].
+
+min_half(LDigs, UDigs) = H, LDigs.length mod 2 == 1, UDigs.length mod 2 == 0 =>
+    H = [1|repeated(0, UDigs.length // 2 - 1)].
+
+max_half(LDigs, UDigs) = H, UDigs.length mod 2 == 0 =>
+    H = UDigs[1..UDigs.length // 2].
+
+max_half(LDigs, UDigs) = H, LDigs.length mod 2 == 0, UDigs.length mod 2 == 1 =>
+    H = repeated(9, LDigs.length // 2).
+    
+repeated(D, 0) = [].
+repeated(D, N) = R, N > 0 => R = [D|repeated(D, N-1)].
+
+doubled(N) = D =>
+    S = to_string(N),
+    D = to_number(S ++ S).
+
+invalid_ids2([L, U]) = [N : N in L..U, invalid2(N)].
+
+invalid2(N) =>
+    S = to_string(N),
+    between(1, S.length // 2, K),
+    repetition_of(S, K).
+
+% S is a repetition of its first K characters.
+repetition_of(S, K) =>
+    S.length mod K == 0,
+    foreach (I in (K+1)..K..(S.length-K+1))
+        S[1..K] = S[I..(I+K-1)]
+    end.
+
+% ===> multitime results
+% 1: picat day02.pi in02.txt
+%             Mean        Std.Dev.    Min         Median      Max
+% real        4.267       0.000       4.267       4.267       4.267
+% user        4.248       0.000       4.248       4.248       4.248
+% sys         0.017       0.000       0.017       0.017       0.017
