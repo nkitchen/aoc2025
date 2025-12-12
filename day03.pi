@@ -1,0 +1,41 @@
+import aoc.
+
+main([File|T]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_lines(File),
+    Banks = [map(to_number, Line) : Line in Input],
+    part1(Banks),
+    part2(Banks).
+
+part1(Banks) =>
+    Output = [joltage(Bank) : Bank in Banks].sum,
+    printf("Part 1: %ld\n", Output).
+
+joltage(Bank) = J => joltage_p(Bank, J).
+
+table(+, max)
+joltage_p([X|Ys], J) ?=>
+    member(Y, Ys),
+    J = 10 * X + Y.
+joltage_p([X|Ys], J) ?=> joltage_p(Ys, J).
+
+part2(Banks) =>
+    Output = [J : Bank in Banks, joltage2(Bank, 12, J)].sum,
+    printf("Part 2: %ld\n", Output),
+    true.
+
+table(+, +, max)
+joltage2(Xs, 1, J) ?=> member(J, Xs).
+joltage2([X|Ys], N, J) ?=>
+    joltage2(Ys, N-1, Jm),
+    J = 10 ** (N - 1) * X + Jm.
+joltage2([X|Ys], N, J) ?=> joltage2(Ys, N, J).
+
+%===> multitime results
+%1: picat day03.pi in03.txt
+%            Mean        Std.Dev.    Min         Median      Max
+%real        0.901       0.000       0.901       0.901       0.901
+%user        0.766       0.000       0.766       0.766       0.766
+%sys         0.134       0.000       0.134       0.134       0.134
