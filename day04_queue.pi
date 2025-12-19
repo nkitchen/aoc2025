@@ -1,0 +1,88 @@
+import aoc.
+
+main([File|T]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_lines(File),
+    Grid = {to_array(Line) : Line in Input},
+    M = length(Grid), N = length(Grid[1]),
+    part1(Grid),
+    part2(Grid).
+
+part1(Grid) =>
+    M = length(Grid), N = length(Grid[1]),
+    AccessibleRolls = sum([1 : I in 1..M, J in 1..N,
+                               Grid[I, J] == '@',
+                               movable(num_adj_rolls(Grid, I, J))]),
+    printf("Part 1: %ld\n", AccessibleRolls),
+    true.
+
+movable(K) => K < 4.
+
+num_adj_rolls(Grid, I, J) = K =>
+    M = length(Grid), N = length(Grid[1]),
+    R = [(II, JJ) : (II, JJ) in neighbors8(I, J, M, N), Grid[II, JJ] == '@'],
+    K = R.length.
+
+neighbors8(I, J, M, N) = [(I+DI, J+DJ) : DI in (-1)..1, DJ in (-1)..1,
+                                         1 <= I+DI, I+DI <= M,
+                                         1 <= J+DJ, J+DJ <= N,
+                                         (DI, DJ) != (0, 0)].
+                                     
+part2(Grid) =>
+    M = length(Grid), N = length(Grid[1]),
+    Nbrs = new_array(M, N),
+    foreach (I in 1..M, J in 1..N)
+        Nbrs[I, J] := count_adjacent(Grid, I, J, '@'),
+    end,
+    Movable = [(I, J) : I in 1..M, J in 1..N,
+                        Grid[I, J] == '@',
+                        Nbrs[I, J] < 4],
+    MovableSet = new_set(Movable),
+    Moved = new_set(),
+    while (Movable != [])
+        Movable = [(I, J)|MovT],
+        Movable := MovT,
+        dprintln(['MovT', MovT]),
+        MovableSet.del((I, J)),
+        Moved.put((I, J)),
+
+        foreach ((II, JJ) in neighbors8(I, J, M, N))
+            Nbrs[II, JJ] := Nbrs[II, JJ] - 1,
+            if (Grid[II, JJ] == '@',
+                not Moved.has_key((II, JJ)),
+                not MovableSet.has_key((II, JJ)))
+
+                if (Nbrs[II, JJ] < 4)
+                  Movable := [(II, JJ)|Movable],
+                  MovableSet.put((II, JJ))
+                end
+            end
+        end,
+        %foreach (PI in 1..M)
+        %    foreach (PJ in 1..N)
+        %        if (Moved.has_key((PI, PJ)))
+        %            print("x")
+        %        else
+        %            print(Grid[PI, PJ])
+        %        end
+        %    end,
+        %    print("\n")
+        %end,
+        %print("\n")
+    end,
+    printf("Part 2: %ld\n", Moved.size).
+
+count_adjacent(Grid, I, J, What) = K =>
+    M = length(Grid), N = length(Grid[1]),
+    Nbrs = [(II, JJ) : (II, JJ) in neighbors8(I, J, M, N),
+                       Grid[II, JJ] == What],
+    K = length(Nbrs).
+
+%===> multitime results
+%1: picat day04_queue.pi in04.txt
+%            Mean        Std.Dev.    Min         Median      Max
+%real        0.183       0.000       0.183       0.183       0.183
+%user        0.147       0.000       0.147       0.147       0.147
+%sys         0.035       0.000       0.035       0.035       0.035

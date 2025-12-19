@@ -1,0 +1,17 @@
+import os.
+
+window2([]) = [].
+window2([X]) = [].
+window2([X | Ys@[Y|T]]) = [[X, Y] | window2(Ys)].
+
+%reductions(Func, [X|T]) = reductions_acc(Func, X, T, [
+
+dprintln(X) =>
+    if (env_exists("DEBUG"), getenv("DEBUG") != "0")
+        println(X)
+    end.
+
+dprint(X) =>
+    if (env_exists("DEBUG"), getenv("DEBUG") != "0")
+        print(X)
+    end.

@@ -1,0 +1,92 @@
+import aoc.
+
+main([File|T]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_lines(File),
+    Grid = {to_array(Line) : Line in Input},
+    M = length(Grid), N = length(Grid[1]),
+    part1(Grid),
+    part2(Grid).
+
+part1(Grid) =>
+    M = length(Grid), N = length(Grid[1]),
+    AccessibleRolls = sum([1 : I in 1..M, J in 1..N,
+                               Grid[I, J] == '@',
+                               num_adj_rolls(Grid, I, J) < 4]),
+    printf("Part 1: %ld\n", AccessibleRolls),
+    true.
+
+num_adj_rolls(Grid, I, J) = K =>
+    M = length(Grid), N = length(Grid[1]),
+    R = [(II, JJ) : (II, JJ) in neighbors8(I, J, M, N), Grid[II, JJ] == '@'],
+    K = R.length.
+
+neighbors8(I, J, M, N) = [(I+DI, J+DJ) : DI in (-1)..1, DJ in (-1)..1,
+                                         1 <= I+DI, I+DI <= M,
+                                         1 <= J+DJ, J+DJ <= N,
+                                         (DI, DJ) != (0, 0)].
+                                     
+part2(Grid) =>
+    roll_count(Grid, 0, NMovable0, NInaccessible0),
+    NMov = NMovable0,
+    NInacc = NInaccessible0,
+    T = 1,
+    while (NMov > 0)
+        roll_count(Grid, T, NMovT, NInaccT),
+        NMov := NMovT,
+        NInacc := NInaccT,
+        T := T + 1,
+        dprintln(["NMov", NMov])
+    end,
+    NRemoved = NMovable0 + NInaccessible0 - NInacc,
+    printf("Part 2: %ld (T=%d)\n", NRemoved, T).
+
+roll_count(Grid, T, NMovable, NInaccessible) =>
+    M = length(Grid), N = length(Grid[1]),
+    Movable = [(I, J) : I in 1..M, J in 1..N,
+                        occupied(I, J, T, Grid),
+                        num_adj_occ(I, J, T, Grid) < 4],
+    Inaccessible = [(I, J) : I in 1..M, J in 1..N,
+                             occupied(I, J, T, Grid),
+                             num_adj_occ(I, J, T, Grid) >= 4],
+    show(Grid, Movable, Inaccessible),
+    NMovable = Movable.length,
+    NInaccessible = Inaccessible.length.
+
+table
+occupied(I, J, 0, Grid) => Grid[I, J] == '@'.
+occupied(I, J, T, Grid) =>
+    occupied(I, J, T-1, Grid),
+    num_adj_occ(I, J, T-1, Grid) >= 4.
+
+table
+num_adj_occ(I, J, T, Grid) = K =>
+    M = length(Grid), N = length(Grid[1]),
+    Nbrs = [(II, JJ) : (II, JJ) in neighbors8(I, J, M, N),
+                       occupied(II, JJ, T, Grid)],
+    K = length(Nbrs).
+
+show(Grid, Movable, Inaccessible) =>
+    true.
+    %M = length(Grid), N = length(Grid[1]),
+    %foreach (I in 1..M)
+    %    foreach (J in 1..N)
+    %        if (membchk((I, J), Movable))
+    %            print("x")
+    %        elseif (membchk((I, J), Inaccessible))
+    %            print("@")
+    %        else
+    %            print(".")
+    %        end
+    %    end,
+    %    print("\n")
+    %end,
+    %print("\n").
+    
+
+%=== time results
+%real	7m25.658s
+%user	7m25.086s
+%sys	0m0.325s
