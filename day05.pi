@@ -1,0 +1,47 @@
+import aoc.
+import util.
+
+main([File|T]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_chars(File),
+    find(Input, "\n\n", SepFrom, SepTo),
+    RangePart = Input[1..(SepFrom - 1)],
+    IngredPart = drop(Input, SepTo),
+    FreshRanges = [map(to_number, split(S, "-")) : S in split(RangePart)],
+    Ingreds = map(to_number, split(IngredPart)),
+    part1(FreshRanges, Ingreds),
+    part2(FreshRanges),
+    true.
+
+part1(FreshRanges, Ingreds) =>
+    FreshIngreds = [Ing : Ing in Ingreds, between_any(Ing, FreshRanges)],
+    printf("Part 1: %ld\n", FreshIngreds.length),
+    true.
+
+between_any(X, []) => false.
+between_any(X, [[Min, Max]|T]) ?=> between(Min, Max, X). 
+between_any(X, [[Min, Max]|T]) ?=> between_any(X, T).
+    
+part2(FreshRanges) =>
+    SortedRanges = sort(FreshRanges),
+    MergedRanges = merge(SortedRanges),
+    NFresh = map(range_length, MergedRanges).sum,
+    printf("Part 2: %ld\n", NFresh),
+    true.
+    
+merge(L@[[A, B]]) = L.
+% A, C, B, D
+% A, C, D, B
+merge([[A, B], [C, D] | T]) = M, B >= C => M = merge([[A, max(B, D)] | T]).
+merge([[A, B], [C, D] | T]) = M, B < C => M = [[A, B] | merge([[C, D] | T])].
+
+range_length([A, B]) = B - A + 1.
+
+% ===> multitime results
+% 1: picat day05.pi in05.txt
+%             Mean        Std.Dev.    Min         Median      Max
+% real        0.065       0.000       0.065       0.065       0.065
+% user        0.040       0.000       0.040       0.040       0.040
+% sys         0.025       0.000       0.025       0.025       0.025
