@@ -1,0 +1,50 @@
+import aoc.
+import util.
+
+main([File|T]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_lines(File),
+    Tokens = [split(Line) : Line in Input],
+    N = Tokens.length,
+    Ops = Tokens[N],
+    ArgsByCol = [map(to_number, Row) : Row in Tokens[1..(N-1)]],
+    Args = transpose(ArgsByCol),
+    part1(Ops, Args),
+    part2(Input),
+    true.
+
+part1(Ops, Args) =>
+    Results = map(problem1, Ops, Args),
+    printf("Part 1: %ld\n", Results.sum),
+    true.
+
+problem1("+", Args) = sum(Args).
+problem1("*", Args) = prod(Args).
+    
+part2(Input) =>
+    Turned = transpose(Input),
+    Blanks = [I : I in 1..Turned.length, strip(Turned[I]) == ""],
+    AugBlanks = [0] ++ Blanks ++ [Turned.length + 1],
+    Blocks = [B : BI in 1..(AugBlanks.length - 1),
+                  TI = AugBlanks[BI],
+                  TJ = AugBlanks[BI + 1],
+                  B = Turned[TI+1..TJ-1]],
+    Results = map(problem2, Blocks),
+    printf("Part 2: %ld\n", Results.sum),
+    true.
+    
+problem2(Block) = R =>
+    K = Block[1].length,
+    Op = [last(Block[1])],
+    Args = [take(Block[1], K - 1).strip.to_number |
+            [Line.strip.to_number : Line in Block.drop(1)]],
+    R = problem1(Op, Args).
+            
+% ===> multitime results
+% 1: picat day02.pi in02.txt
+%             Mean        Std.Dev.    Min         Median      Max
+% real        4.267       0.000       4.267       4.267       4.267
+% user        4.248       0.000       4.248       4.248       4.248
+% sys         0.017       0.000       0.017       0.017       0.017
