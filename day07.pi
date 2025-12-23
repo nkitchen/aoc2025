@@ -1,0 +1,59 @@
+import aoc.
+import ordset.
+
+main([File|T]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_lines(File),
+    Grid = {to_array(Line) : Line in Input},
+    M = length(Grid), N = length(Grid[1]),
+    Start = first([(I, J) : I in 1..M, J in 1..N, Grid[I, J] == 'S']),
+    % Tabling with a set argument is slow
+    % ==> Use a heap map instead.
+    foreach (I in 1..M, J in 1..N)
+        if (Grid[I, J] == '^')
+            get_heap_map(splitters).put((I, J), not_a_value)
+        end
+    end,
+    part1(Start, M, N),
+    part2(Start, M, N),
+    true.
+
+part1((StI, StJ), M, N) =>
+    SH = splitters_hit(StI, StJ, M, N),
+    printf("Part 1: %ld\n", SH.length),
+    true.
+
+table
+splitters_hit(SI, SJ, M, N) = SH, SI > M => SH = [].
+splitters_hit(SI, SJ, M, N) = SH, SJ < 1 => SH = [].
+splitters_hit(SI, SJ, M, N) = SH, SJ > N => SH = [].
+splitters_hit(SI, SJ, M, N) = SH, not get_heap_map(splitters).has_key((SI, SJ)) =>
+    SH = splitters_hit(SI + 1, SJ, M, N).
+splitters_hit(SI, SJ, M, N) = SH =>
+    SHL = splitters_hit(SI, SJ - 1, M, N),
+    SHR = splitters_hit(SI, SJ + 1, M, N),
+    SH = union([(SI, SJ)], union(SHL, SHR)).
+
+part2((StI, StJ), M, N) =>
+    T = timelines(StI, StJ, M, N),
+    printf("Part 1: %ld\n", T),
+    true.
+
+table
+timelines(SI, SJ, M, N) = T, SI > M => T = 1.
+timelines(SI, SJ, M, N) = T, SJ < 1 => T = 1.
+timelines(SI, SJ, M, N) = T, SJ > N => T = 1.
+timelines(SI, SJ, M, N) = T, not get_heap_map(splitters).has_key((SI, SJ)) =>
+    T = timelines(SI + 1, SJ, M, N).
+timelines(SI, SJ, M, N) = T =>
+    T = timelines(SI, SJ - 1, M, N) +
+        timelines(SI, SJ + 1, M, N).
+
+%===> multitime results
+%1: picat day07.pi in07.txt
+%            Mean        Std.Dev.    Min         Median      Max
+%real        0.072       0.000       0.072       0.072       0.072
+%user        0.052       0.000       0.052       0.052       0.052
+%sys         0.019       0.000       0.019       0.019       0.019
