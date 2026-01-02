@@ -1,0 +1,73 @@
+import os.
+import util.
+
+main([File, ConnsStr]) =>
+    go(File, to_number(ConnsStr)).
+
+go(File, Conns) =>
+    Input = read_file_lines(File),
+    Boxes = [map(to_number, split(Line, ",")) : Line in Input],
+    N = Boxes.length,
+    S = 0,
+    println("Pre Sum"),
+    foreach (I in 1..(N-1))
+        foreach (J in (I+1)..N)
+            S := S + I * J
+        end
+    end,
+    println(S),
+    println("Pre Dists"),
+    Dists = [(dist(Boxes[I], Boxes[J]), I, J) : I in 1..(N-1), J in (I+1)..N],
+    println("Got Dists"),
+    part1(N, Dists, Conns),
+    true.
+
+part1(N, Dists, Conns) =>
+    CircuitReps = new_map(),
+    foreach ((D, I, J) in take(sort(Dists), Conns))
+        join(I, J, CircuitReps)
+    end,
+    BoxCircuits = [(Circuit, I) : I in 1..N, find_circuit(I, CircuitReps, Circuit)],
+    CircuitSizes = [G.length : (Circuit, G) in grouped(sort(BoxCircuits))],
+    Largest = take(reverse(sort(CircuitSizes)), 3),
+    printf("Part 1: %ld\n", prod(Largest)),
+    true.
+
+dist(C1@[X1, Y1, Z1], C2@[X2, Y2, Z2]) = [sqrt((X1 - X2)**2 +
+                                               (Y1 - Y2)**2 +
+                                               (Z1 - Z2)**2), C1, C2].
+
+join(I, J, CircuitReps) =>
+    find_circuit(I, CircuitReps, CI),
+    find_circuit(J, CircuitReps, CJ),
+    if (CI != CJ)
+        CircuitReps.put(max(CI, CJ), min(CI, CJ))
+    end.
+
+find_circuit(I, CircuitReps, C) =>
+    if (CircuitReps.has_key(I))
+        D = CircuitReps.get(I),
+        find_circuit(D, CircuitReps, C),
+        if (D != C)
+            CircuitReps.put(I, C)
+        end
+    else
+        C = I
+    end.
+
+grouped([(C, I)]) = [(C, [I])].
+grouped([(C, I)|T]) = G =>
+    H = grouped(T),
+    [(D, Js)|U] = H,
+    if (C == D)
+        G = [(C, [I|Js])|U]
+    else
+        G = [(C, [I])|H]
+    end.
+        
+%===> multitime results
+%1: picat day07.pi in07.txt
+%            Mean        Std.Dev.    Min         Median      Max
+%real        0.072       0.000       0.072       0.072       0.072
+%user        0.052       0.000       0.052       0.052       0.052
+%sys         0.019       0.000       0.019       0.019       0.019
