@@ -1,4 +1,5 @@
 import os.
+import ordset.
 import util.
 
 main([File, ConnsStr]) =>
@@ -7,24 +8,25 @@ main([File, ConnsStr]) =>
 go(File, Conns) =>
     Input = read_file_lines(File),
     Boxes = [map(to_number, split(Line, ",")) : Line in Input],
-    N = Boxes.length,
-    S = 0,
-    println("Pre Sum"),
-    foreach (I in 1..(N-1))
-        foreach (J in (I+1)..N)
-            S := S + I * J
-        end
-    end,
-    println(S),
-    println("Pre Dists"),
-    Dists = [(dist(Boxes[I], Boxes[J]), I, J) : I in 1..(N-1), J in (I+1)..N],
-    println("Got Dists"),
-    part1(N, Dists, Conns),
+    part1(N, Boxes, Conns),
     true.
 
-part1(N, Dists, Conns) =>
+part1(N, Boxes, Conns) =>
+    N = Boxes.length,
+    Dists = [],
+    foreach (I in 1..(N-1), J in (I+1)..N)
+        % Insert by negative distance so that it's easy to pop the largest one.
+        D = (-dist(Boxes[I], Boxes[J]), I, J),
+        DistsIns := insert(Dists, D),
+        if (DistsIns.length > Conns)
+            [DMax|DT] = DistsIns,
+            Dists := DT
+        else
+            Dists := DistsIns
+        end
+    end,
     CircuitReps = new_map(),
-    foreach ((D, I, J) in take(sort(Dists), Conns))
+    foreach ((_, I, J) in Dists)
         join(I, J, CircuitReps)
     end,
     BoxCircuits = [(Circuit, I) : I in 1..N, find_circuit(I, CircuitReps, Circuit)],
@@ -33,9 +35,9 @@ part1(N, Dists, Conns) =>
     printf("Part 1: %ld\n", prod(Largest)),
     true.
 
-dist(C1@[X1, Y1, Z1], C2@[X2, Y2, Z2]) = [sqrt((X1 - X2)**2 +
-                                               (Y1 - Y2)**2 +
-                                               (Z1 - Z2)**2), C1, C2].
+dist(C1@[X1, Y1, Z1], C2@[X2, Y2, Z2]) = sqrt((X1 - X2)**2 +
+                                              (Y1 - Y2)**2 +
+                                              (Z1 - Z2)**2).
 
 join(I, J, CircuitReps) =>
     find_circuit(I, CircuitReps, CI),
