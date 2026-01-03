@@ -1,0 +1,103 @@
+% Using a map to implement a heap queue (this version) is not faster than using ordset:
+% real	0m8.396s
+% user	0m7.994s
+% sys	0m0.401s
+
+import os.
+import util.
+
+main([File, ConnsStr]) =>
+    go(File, to_number(ConnsStr)).
+
+go(File, Conns) =>
+    Input = read_file_lines(File),
+    Boxes = [map(to_number, split(Line, ",")) : Line in Input],
+    part1(N, Boxes, Conns),
+    true.
+
+part1(N, Boxes, Conns) =>
+    N = Boxes.length,
+    Dists = new_map(Conns), % used as a dynamically sized array for a heap queue
+    foreach (I in 1..(N-1), J in (I+1)..N)
+        D = (dist(Boxes[I], Boxes[J]), I, J),
+        heapq_insert(Dists, D),
+        if (Dists.size > Conns)
+            heapq_pop_max(Dists)
+        end
+    end,
+    CircuitReps = new_map(),
+    foreach ((_, I, J) in Dists.values)
+        join(I, J, CircuitReps)
+    end,
+    BoxCircuits = [(Circuit, I) : I in 1..N, find_circuit(I, CircuitReps, Circuit)],
+    CircuitSizes = [G.length : (Circuit, G) in grouped(sort(BoxCircuits))],
+    Largest = take(reverse(sort(CircuitSizes)), 3),
+    printf("Part 1: %ld\n", prod(Largest)),
+    true.
+
+heapq_insert(Dists, D) =>
+    J = Dists.size + 1,
+    Dists.put(J, D),
+    while (J > 1 && Dists.get(J // 2) @< Dists.get(J))
+        I = J // 2,
+        Dists.swap(I, J),
+        J := I
+    end.
+
+swap(Map, I, J) =>
+    A = Map.get(I),
+    B = Map.get(J),
+    Map.put(I, B),
+    Map.put(J, A).
+
+heapq_pop_max(Dists) =>
+    M = Dists.size,
+    % Replace max with last element.
+    X = Dists.get(M),
+    Dists.put(1, X),
+    del(Dists, M),
+    I = 1, JL = I * 2, JR = I * 2 + 1,
+    while (Dists.get(I) @< Dists.get(JL, (0, 0, 0)) ||
+           Dists.get(I) @< Dists.get(JR, (0, 0, 1)))
+        if (Dists.get(JL, (0, 0, 0)) @>= Dists.get(JR, (0, 0, 1)))
+            swap(Dists, I, JL),
+            I := JL
+        else
+            swap(Dists, I, JR),
+            I := JR
+        end,
+        JL := I * 2,
+        JR := I * 2 + 1
+    end.
+
+dist(C1@[X1, Y1, Z1], C2@[X2, Y2, Z2]) = sqrt((X1 - X2)**2 +
+                                              (Y1 - Y2)**2 +
+                                              (Z1 - Z2)**2).
+
+join(I, J, CircuitReps) =>
+    find_circuit(I, CircuitReps, CI),
+    find_circuit(J, CircuitReps, CJ),
+    if (CI != CJ)
+        CircuitReps.put(max(CI, CJ), min(CI, CJ))
+    end.
+
+find_circuit(I, CircuitReps, C) =>
+    if (CircuitReps.has_key(I))
+        D = CircuitReps.get(I),
+        find_circuit(D, CircuitReps, C),
+        if (D != C)
+            CircuitReps.put(I, C)
+        end
+    else
+        C = I
+    end.
+
+grouped([(C, I)]) = [(C, [I])].
+grouped([(C, I)|T]) = G =>
+    H = grouped(T),
+    [(D, Js)|U] = H,
+    if (C == D)
+        G = [(C, [I|Js])|U]
+    else
+        G = [(C, [I])|H]
+    end.
