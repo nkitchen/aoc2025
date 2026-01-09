@@ -1,0 +1,68 @@
+import os.
+import util.
+
+main([File]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_lines(File),
+    RedTiles = {map(to_number, split(Line, ",")) : Line in Input},
+    part1(RedTiles),
+    part2(RedTiles),
+    true.
+
+part1(RedTiles) =>
+    N = RedTiles.length,
+    RectAreas = [rect_area(RedTiles[I], RedTiles[J]) : I in 1..(N-1), J in (I+1)..N],
+    M = max(RectAreas),
+    printf("Part 1: %ld\n", M),
+    true.
+
+rect_area([AX, AY], [BX, BY]) =
+    (abs(AX - BX) + 1) * (abs(AY - BY) + 1).
+
+part2(RedTiles) =>
+    N = RedTiles.length,
+    Segments = [(RedTiles[I], RedTiles[(I mod N) + 1]) : I in 1..N],
+    AreaPairs = [(rect_area(RedTiles[I], RedTiles[J]),
+                  RedTiles[I],
+                  RedTiles[J])
+                 : I in 1..(N-1), J in (I+1)..N],
+    A = max_valid_area(AreaPairs, Segments),
+    printf("Part 2: %ld\n", A),
+    true.
+
+max_valid_area(AreaPairs, Segments) = first_valid(reverse(sort(AreaPairs)), Segments).
+
+first_valid([(A, [IX, IY], [JX, JY]) | T], Segments) = VA =>
+    if (valid(IX, IY, JX, JY, Segments))
+        VA = A
+    else
+        VA = first_valid(T, Segments)
+    end.
+
+valid(IX, IY, JX, JY, []) => true.
+valid(IX, IY, JX, JY, [Segment | T]) =>
+    not cuts(IX, IY, JX, JY, Segment),
+    valid(IX, IY, JX, JY, T).
+
+% The segment intersects the rectangle inside the border.
+cuts(IX, IY, JX, JY, ([SegX, SegAY], [SegX, SegBY])) =>
+    min(IX, JX) < SegX, SegX < max(IX, JX),
+    % There is a Y on the segment inside the rectangle.
+    % => Segment not below the rectangle's interior...
+    max(SegAY, SegBY) > min(IY, JY),
+    % ...nor above it
+    min(SegAY, SegBY) < max(IY, JY).
+        
+cuts(IX, IY, JX, JY, ([SegAX, SegY], [SegBX, SegY])) =>
+    min(IY, JY) < SegY, SegY < max(IY, JY),
+    max(SegAX, SegBX) > min(IX, JX),
+    min(SegAX, SegBX) < max(IX, JX).
+        
+% ===> multitime results
+% 1: picat day09.pi in09.txt
+%             Mean        Std.Dev.    Min         Median      Max
+% real        1.299       0.000       1.299       1.299       1.299
+% user        1.274       0.000       1.274       1.274       1.274
+% sys         0.024       0.000       0.024       0.024       0.024
