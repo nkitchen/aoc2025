@@ -1,0 +1,78 @@
+import aoc.
+import os.
+import util.
+import mip.
+
+main([File]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_lines(File),
+    MachineReqs = [parse_reqs(Line) : Line in Input],
+    part1(MachineReqs),
+    part2(MachineReqs),
+    true.
+
+parse_reqs(Line) = Reqs =>
+    Fields = split(Line),
+    Indicators = {parse_indicator(C) : C in strip(Fields[1], "[]")},
+    ButtonFields = [strip(F, "()") : F in Fields[2..(Fields.length - 1)]],
+    Buttons = {map(to_number, split(F, ",")) : F in ButtonFields},
+    JoltageField = strip(last(Fields), "{}"),
+    Joltages = to_array(map(to_number, split(JoltageField, ","))),
+    Reqs = [Indicators, Buttons, Joltages],
+    true.
+
+parse_indicator('.') = 0.
+parse_indicator('#') = 1.
+
+part1(MachineReqs) =>
+    Presses = [min_presses_for_indicators(Reqs) : Reqs in MachineReqs],
+    printf("Part 1: %ld\n", Presses.sum),
+    true.
+
+part2(MachineReqs) =>
+    Presses = [min_presses_for_joltages(Reqs) : Reqs in MachineReqs],
+    printf("Part 2: %ld\n", Presses.sum),
+    true.
+
+min_presses_for_indicators([Indicators, Buttons, _]) = P =>
+    ButtonsByIndicator = {[BI : BI in 1..length(Buttons), 
+                                member(IndI - 1, Buttons[BI])]
+                          : IndI in 1..length(Indicators)},
+    % All that matters for indicator state is the parity of presses,
+    % so it only matters if we push each button 0 times or 1 time.
+    B = new_array(Buttons.length),    
+    foreach (BI in 1..length(Buttons))
+        B[BI] :: 0..1
+    end,
+    foreach (IndI in 1..length(Indicators))
+        sum([B[BI] : BI in ButtonsByIndicator[IndI]]) mod 2 #= Indicators[IndI]
+    end,
+    P #= sum(B),
+    solve([$min(P)], B),
+    dprintln([Indicators, Buttons]),
+    dprintln(B),
+    true.
+
+min_presses_for_joltages([_, Buttons, JoltageReqs]) = P =>
+    ButtonsForJoltage = {[BI : BI in 1..length(Buttons), 
+                               member(J - 1, Buttons[BI])]
+                          : J in 1..length(JoltageReqs)},
+    B = new_array(Buttons.length),    
+    foreach (BI in 1..length(Buttons))
+        B[BI] :: 0..max(JoltageReqs)
+    end,
+    foreach (J in 1..length(JoltageReqs))
+        sum([B[BI] : BI in ButtonsForJoltage[J]]) #= JoltageReqs[J]
+    end,
+    P #= sum(B),
+    solve([$min(P)], B),
+    true.
+
+% ===> multitime results (with GLPK installed)
+% 1: picat day10.pi in10.txt
+%             Mean        Std.Dev.    Min         Median      Max
+% real        2.204       0.000       2.204       2.204       2.204
+% user        1.299       0.000       1.299       1.299       1.299
+% sys         0.897       0.000       0.897       0.897       0.897
