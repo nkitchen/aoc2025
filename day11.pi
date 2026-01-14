@@ -1,0 +1,56 @@
+import util.
+
+main([File]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_lines(File),
+    parse_devices(Input),
+    part1(),
+    part2(),
+    true.
+
+parse_devices(Lines) =>
+    foreach (Line in Lines)
+        find(Line, ":", From, To),
+        Dev = to_atom(Line[1..(From - 1)]),
+        Outputs = map(to_atom, split(Line[(To + 1)..length(Line)])),
+        % Tabling with a set argument is slow
+        % ==> Use a heap map instead.
+        get_heap_map(dev_outputs).put(Dev, Outputs)
+    end.
+        
+part1(), get_heap_map(dev_outputs).has_key(you) =>
+    Paths = path_count(you),
+    printf("Part 1: %ld\n", Paths),
+    true.
+
+part1() =>
+    println("Part 1 skipped").
+
+table
+path_count(out) = 1.
+path_count(U) = P =>
+    Outputs = get_heap_map(dev_outputs).get(U),
+    P = sum([path_count(V) : V in Outputs]).
+
+part2(), get_heap_map(dev_outputs).has_key(svr) =>
+    Paths = path_count(svr, fft) * path_count(fft, dac) * path_count(dac, out)
+          + path_count(svr, dac) * path_count(dac, fft) * path_count(fft, out),
+    printf("Part 2: %ld\n", Paths),
+    true.
+
+part2 => println("Part 2 skipped").
+
+table
+path_count(U, V) = P, U = V => P = 1.
+path_count(U, V) = P, U != V =>
+    Outputs = get_heap_map(dev_outputs).get(U, []),
+    P = sum([path_count(W, V) : W in Outputs]).
+
+%===> multitime results
+%1: picat day11.pi in11.txt
+%            Mean        Std.Dev.    Min         Median      Max
+%real        0.061       0.000       0.061       0.061       0.061
+%user        0.023       0.000       0.023       0.023       0.023
+%sys         0.023       0.000       0.023       0.023       0.023
