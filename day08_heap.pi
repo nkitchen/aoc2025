@@ -1,10 +1,8 @@
-% Using a map to implement a heap queue (this version) is not faster than using ordset:
-% real	0m8.396s
-% user	0m7.994s
-% sys	0m0.401s
-
 import os.
 import util.
+
+main([File]) =>
+    println("Usage: picat day08.txt DATA CONNS").
 
 main([File, ConnsStr]) =>
     go(File, to_number(ConnsStr)).
@@ -12,21 +10,22 @@ main([File, ConnsStr]) =>
 go(File, Conns) =>
     Input = read_file_lines(File),
     Boxes = [map(to_number, split(Line, ",")) : Line in Input],
-    part1(N, Boxes, Conns),
+    part1(Boxes, Conns),
+    part2(Boxes, Conns),
     true.
 
-part1(N, Boxes, Conns) =>
+part1(Boxes, Conns) =>
     N = Boxes.length,
-    Dists = new_map(Conns), % used as a dynamically sized array for a heap queue
+    Dists = new_max_heap(Conns),
     foreach (I in 1..(N-1), J in (I+1)..N)
         D = (dist(Boxes[I], Boxes[J]), I, J),
-        heapq_insert(Dists, D),
-        if (Dists.size > Conns)
-            heapq_pop_max(Dists)
+        Dists.heap_push(D),
+        if (Dists.heap_size() > Conns)
+            _ = Dists.heap_pop()
         end
     end,
     CircuitReps = new_map(),
-    foreach ((_, I, J) in Dists.values)
+    foreach ((_, I, J) in Dists.heap_to_list())
         join(I, J, CircuitReps)
     end,
     BoxCircuits = [(Circuit, I) : I in 1..N, find_circuit(I, CircuitReps, Circuit)],
@@ -35,50 +34,36 @@ part1(N, Boxes, Conns) =>
     printf("Part 1: %ld\n", prod(Largest)),
     true.
 
-heapq_insert(Dists, D) =>
-    J = Dists.size + 1,
-    Dists.put(J, D),
-    while (J > 1 && Dists.get(J // 2) @< Dists.get(J))
-        I = J // 2,
-        Dists.swap(I, J),
-        J := I
-    end.
+part2(Boxes, Conns) =>
+    N = Boxes.length,
+    Dists = sort([(dist(Boxes[I], Boxes[J]), I, J) : I in 1..(N-1), J in (I+1)..N]),
+    CircuitReps = new_map(),
+    NCircuits = N,
+    Last = (0, 0),
+    foreach ((_, I, J) in Dists, break(NCircuits == 1))
+        join(I, J, CircuitReps, Decr),
+        NCircuits := NCircuits - Decr,
+        Last := (I, J)
+    end,
+    (LastI, LastJ) = Last,
+    FromWall = Boxes[LastI, 1] * Boxes[LastJ, 1],
+    printf("Part 2: %ld\n", FromWall),
+    true.
 
-swap(Map, I, J) =>
-    A = Map.get(I),
-    B = Map.get(J),
-    Map.put(I, B),
-    Map.put(J, A).
+dist([X1, Y1, Z1], [X2, Y2, Z2]) = ((X1 - X2)**2 +
+                                    (Y1 - Y2)**2 +
+                                    (Z1 - Z2)**2).
 
-heapq_pop_max(Dists) =>
-    M = Dists.size,
-    % Replace max with last element.
-    X = Dists.get(M),
-    Dists.put(1, X),
-    del(Dists, M),
-    I = 1, JL = I * 2, JR = I * 2 + 1,
-    while (Dists.get(I) @< Dists.get(JL, (0, 0, 0)) ||
-           Dists.get(I) @< Dists.get(JR, (0, 0, 1)))
-        if (Dists.get(JL, (0, 0, 0)) @>= Dists.get(JR, (0, 0, 1)))
-            swap(Dists, I, JL),
-            I := JL
-        else
-            swap(Dists, I, JR),
-            I := JR
-        end,
-        JL := I * 2,
-        JR := I * 2 + 1
-    end.
+join(I, J, CircuitReps) => join(I, J, CircuitReps, _).
 
-dist(C1@[X1, Y1, Z1], C2@[X2, Y2, Z2]) = sqrt((X1 - X2)**2 +
-                                              (Y1 - Y2)**2 +
-                                              (Z1 - Z2)**2).
-
-join(I, J, CircuitReps) =>
+join(I, J, CircuitReps, Decr) =>
     find_circuit(I, CircuitReps, CI),
     find_circuit(J, CircuitReps, CJ),
     if (CI != CJ)
-        CircuitReps.put(max(CI, CJ), min(CI, CJ))
+        CircuitReps.put(max(CI, CJ), min(CI, CJ)),
+        Decr = 1
+    else
+        Decr = 0
     end.
 
 find_circuit(I, CircuitReps, C) =>
@@ -101,3 +86,10 @@ grouped([(C, I)|T]) = G =>
     else
         G = [(C, [I])|H]
     end.
+
+%===> multitime results
+%1: picat day08_heap.pi in08.txt 1000
+%            Mean        Std.Dev.    Min         Median      Max
+%real        11.213      0.000       11.213      11.213      11.213
+%user        10.050      0.000       10.050      10.050      10.050
+%sys         1.159       0.000       1.159       1.159       1.159
