@@ -4,6 +4,8 @@ window2([]) = [].
 window2([X]) = [].
 window2([X | Ys@[Y|T]]) = [[X, Y] | window2(Ys)].
 
+map_array(Func, A) = to_array(map(Func, to_list(A))).
+
 %reductions(Func, [X|T]) = reductions_acc(Func, X, T, [
 
 dprintln(X) =>
@@ -14,4 +16,19 @@ dprintln(X) =>
 dprint(X) =>
     if (env_exists("DEBUG"), getenv("DEBUG") != "0")
         print(X)
+    end.
+
+dprintf(S) =>
+    if (env_exists("DEBUG"), getenv("DEBUG") != "0")
+        printf(S)
+    end.
+
+dprintf(S, X) =>
+    if (env_exists("DEBUG"), getenv("DEBUG") != "0")
+        printf(S, X)
+    end.
+
+dprintf(S, X, Y) =>
+    if (env_exists("DEBUG"), getenv("DEBUG") != "0")
+        printf(S, X, Y)
     end.

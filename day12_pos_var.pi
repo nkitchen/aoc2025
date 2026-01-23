@@ -1,0 +1,155 @@
+import aoc.
+import os.
+import util.
+import sat.
+
+main([File]) =>
+    go(File).
+
+go(File) =>
+    Input = read_file_lines(File),
+    [Shapes, Regions] = parse_presents(Input),
+    part1(Shapes, Regions),
+    true.
+
+parse_presents(Lines) = [Shapes, Regions] =>
+    Blocks = line_blocks(Lines),
+    Shapes = map(parse_shape, Blocks[1..length(Blocks)-1]),
+    Regions = map(parse_region, last(Blocks)).
+
+line_blocks(Lines) = Blocks =>
+    LinesA = to_array(Lines),
+    BlankIdxs = [0] ++ [I : I in 1..length(LinesA), LinesA[I] == ""] ++ [LinesA.length + 1],
+    BlockDelims = window2(BlankIdxs),
+    Blocks = [to_list(LinesA[I+1..J-1]) : [I, J] in BlockDelims].
+
+parse_shape(Lines) = Shape =>
+    % We don't need the line with the shape index.
+    L = [map(shape_cell, Line) : Line in Lines.slice(2)],
+    Shape = list_matrix_to_array_matrix(L).
+
+shape_cell('.') = 0.
+shape_cell('#') = 1.
+
+parse_region(Line) = [Dims, ShapeCounts] =>
+    find(Line, ": ", ColonFrom, ColonTo),
+    DimsStr = Line[1..(ColonFrom - 1)],
+    CountsStr = Line.slice(ColonTo + 1),
+    Dims = reverse(map(to_number, DimsStr.split("x"))),
+    ShapeCounts = map(to_number, CountsStr.split()).
+
+part1(Shapes, Regions) =>
+    Variants = map(make_variants, Shapes),
+    Fits = [R : R in Regions, fit(Variants, R)],
+    printf("Part 1: %ld\n", Fits.length),
+    true.
+
+make_variants(Shape) = Variants =>
+    Turned = [Shape],
+    while (Turned.length < 4)
+        Turned := [turn(first(Turned))|Turned]
+    end,
+    WithHFlips = flatten([[V, flip_horiz(V)] : V in Turned]),
+    WithVFlips = flatten([[V, flip_vert(V)] : V in WithHFlips]),
+    Seen = new_set(),
+    Variants = [],
+    foreach (V in WithVFlips)
+        S = to_string(V),
+        if (not Seen.has_key(S))
+            Variants := [V|Variants],
+            Seen.put(S)
+        end
+    end.
+
+turn(V) = T =>
+    M = V.length,
+    N = V[1].length,
+    T = {{V[I, J] : I in M..-1..1} : J in 1..N}.
+flip_horiz(V) = map_array(reverse, V).
+flip_vert(V) = V.transpose().flip_horiz().transpose().
+
+fit(Variants, Region) =>
+    S = Variants.length,
+    [[M, N], ShapeCounts] = Region,
+    ShapeCounts.length == S,
+    K = length(Variants[1, 1]),
+    K == 3,
+
+    ShapeId = new_array(S),
+    NextShapeId = 1,
+    foreach (I in 1..S)
+        ShapeId[I] = new_array(ShapeCounts[I]),
+        foreach (J in 1..length(ShapeId[I]))
+            ShapeId[I, J] := NextShapeId,
+            NextShapeId := NextShapeId + 1
+        end
+    end,
+    MaxShapeId = NextShapeId - 1,
+
+    Pos = new_array(MaxShapeId, 2),
+    Idx = new_array(MaxShapeId, K, K, 2),
+    foreach (SId in 1..MaxShapeId)
+        PosI :: 1..(M - K + 1),
+        PosJ :: 1..(N - K + 1),
+        Pos[SId] = {PosI, PosJ},
+        foreach (DI in 1..K, DJ in 1..K)
+            II :: 1..M,
+            JJ :: 1..N,
+            II #= PosI + DI - 1,
+            JJ #= PosJ + DJ - 1,
+            Idx[SId, DI, DJ] = {II, JJ}
+        end
+    end,
+
+    foreach (I in 1..S, J in 1..(ShapeCounts[I]-1))
+        Pos[ShapeId[I, J], 1] #< Pos[ShapeId[I, J+1], 1]
+        #\/
+        (Pos[ShapeId[I, J], 1] #= Pos[ShapeId[I, J+1], 1]
+         #/\
+         Pos[ShapeId[I, J], 2] #< Pos[ShapeId[I, J+1], 2])
+    end,
+
+    InstVariant = new_array(MaxShapeId),
+    foreach (I in 1..S)
+        foreach (J in 1..ShapeCounts[I])
+            InstVariant[ShapeId[I, J]] :: 1..length(Variants[I])
+        end
+    end,
+
+    Grid = new_array(M, N),
+    foreach (I in 1..M, J in 1..N)
+        Grid[I, J] :: 0..MaxShapeId
+    end,
+
+    InstCells = new_array(MaxShapeId, K, K),
+    foreach (SId in 1..MaxShapeId, DI in 1..K, DJ in 1..K)
+        InstCells[SId, DI, DJ] :: 0..MaxShapeId,
+        matrix_element(Grid, Idx[SId, DI, DJ, 1], Idx[SId, DI, DJ, 2],
+                       InstCells[SId, DI, DJ])
+    end,
+
+    foreach (ShapeI in 1..S, InstJ in 1..ShapeCounts[ShapeI])
+        SId = ShapeId[ShapeI, InstJ],
+        foreach (V in 1..length(Variants[ShapeI]))
+            VarSel :: 0..1,
+            VarSel #<=> InstVariant[SId] #= V,
+            foreach (DI in 1..K, DJ in 1..K, Variants[ShapeI, V, DI, DJ] == 1)
+                VarSel #=> InstCells[SId, DI, DJ] #= SId
+            end
+        end
+    end,
+        
+    solve([InstVariant, Pos, Idx, Grid, InstCells]),
+    %println(InstVariant),
+    %println(Pos),
+    %foreach (I in 1..M)
+    %    println(Grid[I])
+    %end,
+    true.
+
+% ===> multitime results (with GLPK installed)
+% 1: picat day10.pi in10.txt
+%             Mean        Std.Dev.    Min         Median      Max
+% real        2.204       0.000       2.204       2.204       2.204
+% user        1.299       0.000       1.299       1.299       1.299
+% sys         0.897       0.000       0.897       0.897       0.897
